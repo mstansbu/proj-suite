@@ -1,0 +1,13 @@
+package templates
+
+templ Home() {
+	<div
+		id="home-wrapper"
+		class="wrapper"
+	>
+		<form id="newGameForm" action="/" method="GET" hx-get="/tictactoe" hx-select="#ttt-wrapper" hx-target="#home-wrapper" hx-swap="outerHTML">
+			<button type="submit" name="new">New Game</button>
+			<button type="submit" name="join">Join Game</button>
+		</form>
+	</div>
+}

@@ -10,7 +10,10 @@ import "context"
 import "io"
 import "bytes"
 
-func Game() templ.Component {
+import "github.com/google/uuid"
+import "strconv"
+
+func TicTacToe(gameid uuid.UUID, firstPlayer bool) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
 		if !templ_7745c5c3_IsBuffer {
@@ -23,7 +26,33 @@ func Game() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"wrapper\"><div id=\"upper-left\">1</div><div id=\"upper-center\">2</div><div id=\"upper-right\">3</div><div id=\"middle-left\">4</div><div id=\"middle-center\">5</div><div id=\"middle-right\">6</div><div id=\"bottom-left\">7</div><div id=\"bottom-center\">8</div><div id=\"bottom-right\">9</div></div>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div id=\"ttt-wrapper\" class=\"wrapper\" data-gameid=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var2 string
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(gameid.String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/game.templ`, Line: 10, Col: 30}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" data-xplayer=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var3 string
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.FormatBool(firstPlayer))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/game.templ`, Line: 11, Col: 47}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" hx-on:htmx:load=\"htmx.trigger(&#39;#ttt-wrapper&#39;,&#39;ttt-start&#39;)\"><div id=\"ttt-0\" class=\"ttt-square unplayed upper left\" @click.once=\"playTurn($el)\"></div><div id=\"ttt-1\" class=\"ttt-square unplayed upper center\" @click.once=\"playTurn($el)\"></div><div id=\"ttt-2\" class=\"ttt-square unplayed upper right\" @click.once=\"playTurn($el)\"></div><div id=\"ttt-3\" class=\"ttt-square unplayed middle left\" @click.once=\"playTurn($el)\"></div><div id=\"ttt-4\" class=\"ttt-square unplayed middle center\" @click.once=\"playTurn($el)\"></div><div id=\"ttt-5\" class=\"ttt-square unplayed middle right\" @click.once=\"playTurn($el)\"></div><div id=\"ttt-6\" class=\"ttt-square unplayed bottom left\" @click.once=\"playTurn($el)\"></div><div id=\"ttt-7\" class=\"ttt-square unplayed bottom center\" @click.once=\"playTurn($el)\"></div><div id=\"ttt-8\" class=\"ttt-square unplayed bottom right\" @click.once=\"playTurn($el)\"></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

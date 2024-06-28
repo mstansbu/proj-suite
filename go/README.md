@@ -1,1 +1,1 @@
-Folder for go + templ + htmx + tailwind + alpinejs projects
+Folder for go + templ + htmx + tailwind + alpinejs/jquery projects

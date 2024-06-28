@@ -1,14 +1,19 @@
 package templates
 
-templ Layout(){
+templ Layout() {
+    <!DOCTYPE html>
     <html>
         <head>
             <link rel="stylesheet" href="main.css"/>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.slim.min.js" integrity="sha512-sNylduh9fqpYUK5OYXWcBleGzbZInWj8yCJAU57r1dpSK9tP2ghf/SRYCMj+KsslFkCOt3TvJrX2AV/Gc3wOqA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js" integrity="sha512-ytM6hP1K9BkRTjUQZpxZKFjJ2TvE4QXaK7phVymsm7NimaI5H09TWWW6f2JMbonLp4ftYU6xfwQGoe3C8jta9A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/2.0.0/htmx.min.js" integrity="sha512-Cpedvic0/Mgc3uRJ5apQ/ZYroPCZpatYEXGJayRaRNjKLaFualFxfxn97LJymznV+nC7y0/Hp/apHNwGpMimuw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            <script defer src="tic-tac-toe.js"></script>
             <title>Tic Tac Toe</title>
         </head>
         <body>
             <div>
-                @Game()
+                @Home()
             </div>
         </body>
     </html>

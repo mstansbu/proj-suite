@@ -4,3 +4,31 @@
     gap: 10px;
     grid-auto-rows: minmax(100px, auto);
 }
+
+.played-x {
+    background-color: aqua;
+}
+
+.played-o {
+    background-color: coral;
+}
+
+.unplayed {
+    background-color: black;
+}
+
+.upper {
+    border-bottom: 5px;
+}
+
+.middle {
+    border-bottom: 5px;
+}
+
+.left {
+    border-right: 5px;
+}
+
+.center {
+    border-right: 5px;
+}
