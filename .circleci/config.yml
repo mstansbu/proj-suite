@@ -6,7 +6,7 @@ jobs:
     # Install go modules and run tests
     docker:
       - image: cimg/go:1.22
-    working_directory: ~/project/go
+    working_directory: ~/project/frontend/go
     steps:
       - checkout:
           path: ~/project
@@ -32,7 +32,7 @@ jobs:
     # Build go executables and store them as artifacts
     docker:
       - image: cimg/go:1.22
-    working_directory: ~/project/go
+    working_directory: ~/project/frontend/go
     steps:
       - checkout:
           path: ~/project
