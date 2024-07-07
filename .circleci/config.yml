@@ -32,6 +32,7 @@ jobs:
     # Build go executables and store them as artifacts
     docker:
       - image: cimg/go:1.22
+    working_directory: ~/project/go
     steps:
       - checkout:
           path: ~/project
