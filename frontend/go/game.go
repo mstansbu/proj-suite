@@ -1,24 +1,35 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/valyala/fastjson"
 )
 
+type MessageType byte
+
 const (
-	MessageTurnPlayed byte = iota
+	MessageTurnPlayed MessageType = iota
 	MessageGameWin
 	MessageFail
 )
+
+type Message struct {
+	messageId   uuid.UUID
+	messageType MessageType
+	senderId    uuid.UUID
+	payload     []byte
+}
 
 type GameConnection struct {
 	gameServer *GameServer
 	Id         uuid.UUID
 	board      [9]byte
 	players    map[uuid.UUID]*Client
-	broadcast  chan []byte
+	broadcast  chan *Message
 	register   chan *Client
 	unregister chan *Client
 }
@@ -34,7 +45,7 @@ func NewGameConnection(gs *GameServer) *GameConnection {
 		Id:         uuid.New(),
 		board:      [9]byte{},
 		players:    make(map[uuid.UUID]*Client),
-		broadcast:  make(chan []byte, 256),
+		broadcast:  make(chan *Message, 256),
 		register:   make(chan *Client, 256),
 		unregister: make(chan *Client, 256),
 	}
@@ -51,27 +62,28 @@ func (gc *GameConnection) run() {
 				close(player.send)
 			}
 		case message := <-gc.broadcast:
-			clientId, err := uuid.FromBytes(message[:16])
-			if err != nil {
-				slog.Error("Something funky happened", "Error", err)
-				panic(err)
-			}
-			payload := message[16:]
 			var parser fastjson.Parser
-			val, err := parser.ParseBytes(payload)
-			if err != nil || !val.Exists("firstPlayer") || !val.Exists("squarePlayed") {
-				gc.players[clientId].send <- []byte{MessageFail}
+			payload, err := parser.ParseBytes(message.payload)
+			if err != nil || !payload.Exists("firstPlayer") || !payload.Exists("squarePlayed") {
+				gc.players[message.senderId].send <- &Message{messageId: message.messageId, senderId: gc.Id, messageType: MessageFail}
 				continue
 			}
-			Something := val.Get("firstPlayer")
-			firstPlayerString := Something.String()
+			firstPlayerString := payload.Get("firstPlayer").String()
 			firstPlayer := true
 			if firstPlayerString == "false" {
 				firstPlayer = false
 			}
-			squarePlayed := byte(val.GetInt("squarePlayed"))
+			//Fix jSON
+			spString := string(payload.Get("squarePlayed").GetStringBytes())
+			fmt.Println(spString)
+			squarePlayed, err := strconv.Atoi(spString)
+			if err != nil {
+				slog.Error("Failed to parse squareplayed", "Error", err)
+				gc.players[message.senderId].send <- &Message{messageId: message.messageId, senderId: gc.Id, messageType: MessageFail}
+				continue
+			}
 			if squarePlayed > 8 {
-				gc.players[clientId].send <- []byte{MessageFail}
+				gc.players[message.senderId].send <- &Message{messageId: message.messageId, senderId: gc.Id, messageType: MessageFail}
 				continue
 			}
 			//clientIdByteArray := [16]byte(clientId)
@@ -79,14 +91,14 @@ func (gc *GameConnection) run() {
 			if firstPlayer {
 				firstPlayerByte = 1
 			}
-			win := gc.playTurn(firstPlayer, squarePlayed)
+			win := gc.playTurn(firstPlayer, byte(squarePlayed))
 			for _, player := range gc.players {
-				if clientId != player.Id {
-					player.send <- []byte{MessageTurnPlayed, squarePlayed, firstPlayerByte}
+				if message.senderId != player.Id {
+					player.send <- &Message{messageId: message.messageId, senderId: message.senderId, messageType: MessageTurnPlayed, payload: []byte{byte(squarePlayed), firstPlayerByte}}
 				}
 				if win {
 					//payload := append([]byte{MessageGameWin}, clientIdByteArray[:]...)
-					player.send <- []byte{MessageGameWin, firstPlayerByte}
+					player.send <- &Message{messageId: message.messageId, senderId: gc.Id, messageType: MessageGameWin, payload: []byte{firstPlayerByte}}
 				}
 			}
 		}
@@ -133,10 +145,10 @@ func (gc *GameConnection) checkColumns() bool {
 }
 
 func (gc *GameConnection) checkCross() bool {
-	if gc.board[0] != 0 && gc.board[0] == gc.board[5] && gc.board[0] == gc.board[8] {
+	if gc.board[0] != 0 && gc.board[0] == gc.board[4] && gc.board[0] == gc.board[8] {
 		return true
 	}
-	if gc.board[2] != 0 && gc.board[2] == gc.board[5] && gc.board[2] == gc.board[6] {
+	if gc.board[2] != 0 && gc.board[2] == gc.board[4] && gc.board[2] == gc.board[6] {
 		return true
 	}
 	return false

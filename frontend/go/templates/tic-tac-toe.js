@@ -28,7 +28,7 @@ document.body.addEventListener('ttt-start', (event) => {
             myTurn = false;
             //Handle Win
         } else if (payload.hasOwnProperty("square")) {
-            if (payload.firstPlayer != xplayer) {
+            if (payload.firstPlayer != xplayer && div.classList.contains('unplayed')) {
                 const id = "ttt-" + payload.square;
                 const div = document.getElementById(id);
                 div.classList.remove('unplayed');
@@ -48,9 +48,9 @@ document.body.addEventListener('ttt-start', (event) => {
             div.classList.remove('unplayed');
             xplayer ? div.classList.add('played-x') : div.classList.add('played-o');
             myTurn = !myTurn;
-            const payload = { "squarePlayed": div.id.substring(4), "firstPlayer": xplayer };
+            const payload = { "squarePlayed": $('li').index(div), "firstPlayer": xplayer };
             console.log(payload)
-            socket.send(JSON.stringify(payload));
+            socket.send(payload);
         }
     };
 });

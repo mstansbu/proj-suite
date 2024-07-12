@@ -90,7 +90,7 @@ func clientTIcTacToeConnect(c *gin.Context) {
 		return
 	}
 
-	player := &Client{Id: uuid.New(), conn: conn, game: game, send: make(chan []byte, 256)}
+	player := &Client{Id: uuid.New(), conn: conn, game: game, send: make(chan *Message, 256)}
 	game.register <- player
 
 	go player.read()

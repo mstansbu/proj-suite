@@ -23,16 +23,11 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 )
 
-var (
-	newline = []byte{'\n'}
-	space   = []byte{' '}
-)
-
 type Client struct {
 	Id   uuid.UUID
 	game *GameConnection
 	conn *websocket.Conn
-	send chan []byte
+	send chan *Message
 }
 
 func (c *Client) read() {
@@ -53,8 +48,7 @@ func (c *Client) read() {
 			}
 			break
 		}
-		message = append(c.Id[:], message...)
-		c.game.broadcast <- message
+		c.game.broadcast <- &Message{messageId: uuid.New(), senderId: c.Id, messageType: MessageTurnPlayed, payload: message}
 	}
 }
 
@@ -75,12 +69,12 @@ func (c *Client) write() {
 				return
 			}
 			var builder strings.Builder
-			switch message[0] {
+			switch message.messageType {
 			case MessageFail:
 				builder.WriteString(`{"error":"Message Failed To Send"}`)
 			case MessageTurnPlayed:
-				builder.WriteString(`{"square":` + strconv.Itoa(int(message[1])) + `,"firstPlayer":`)
-				if message[2] == 1 {
+				builder.WriteString(`{"square":` + strconv.Itoa(int(message.payload[0])) + `,"firstPlayer":`)
+				if message.payload[1] == 1 {
 					builder.WriteString("true")
 				} else {
 					builder.WriteString("false")
@@ -88,7 +82,7 @@ func (c *Client) write() {
 				builder.WriteString(`}`)
 			case MessageGameWin:
 				builder.WriteString(`{"won":true,"firstPlayer":`)
-				if message[1] == 1 {
+				if message.payload[0] == 1 {
 					builder.WriteString("true")
 				} else {
 					builder.WriteString("false")
