@@ -7,8 +7,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mstansbu/tic-tac-toe/proto"
+	pb "github.com/mstansbu/tic-tac-toe/proto"
 	"github.com/mstansbu/tic-tac-toe/templates"
+	"github.com/mstansbu/tic-tac-toe/tictactoe"
 )
 
 var gameServer *GameServer
@@ -37,10 +38,11 @@ func serveHome(c *gin.Context) {
 func serveTicTacToe(c *gin.Context) {
 	firstPlayer := true
 	var game *GameConnection
+	newTTT := tictactoe.NewTicTacToeGame()
 
 	c.Request.ParseForm()
 	if c.Request.Form.Has("new") {
-		game = NewGameConnection(gameServer)
+		game = NewGameConnection(gameServer, newTTT)
 		go game.run()
 		gameServer.register <- game
 	} else {
@@ -92,7 +94,7 @@ func clientTIcTacToeConnect(c *gin.Context) {
 		return
 	}
 
-	player := &Client{Id: rand.Uint32(), conn: conn, game: game, send: make(chan *proto.Message, 256)}
+	player := &Client{Id: rand.Uint32(), conn: conn, game: game, send: make(chan *pb.Message, 256)}
 
 	game.register <- player
 

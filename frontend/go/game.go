@@ -7,21 +7,26 @@ import (
 	pb "github.com/mstansbu/tic-tac-toe/proto"
 )
 
+type Game interface {
+	PlayTurn(*pb.Payload) bool
+	CheckWin() bool
+}
+
 type GameConnection struct {
 	gameServer *GameServer
 	Id         uint64
-	board      [9]byte
+	Game       Game
 	players    map[uint32]*Client
 	broadcast  chan *pb.Message
 	register   chan *Client
 	unregister chan *Client
 }
 
-func NewGameConnection(gs *GameServer) *GameConnection {
+func NewGameConnection(gs *GameServer, game Game) *GameConnection {
 	return &GameConnection{
 		gameServer: gs,
 		Id:         rand.Uint64(), //TODO replace with pull/create from DB
-		board:      [9]byte{},
+		Game:       game,
 		players:    make(map[uint32]*Client),
 		broadcast:  make(chan *pb.Message, 256),
 		register:   make(chan *Client, 256),
@@ -48,7 +53,7 @@ func (gc *GameConnection) run() {
 					if ptPayload.SquarePlayed > 8 {
 						//todo send fail message
 					}
-					win := gc.playTurn(message.Payload.GetTttPlayTurnType().FirstPlayer, message.Payload.GetTttPlayTurnType().GetSquarePlayed())
+					win := gc.Game.PlayTurn(message.Payload)
 					var winMessage pb.Message
 					for _, player := range gc.players {
 						if message.SenderId != player.Id {
@@ -73,53 +78,4 @@ func (gc *GameConnection) run() {
 
 		}
 	}
-}
-
-func (gc *GameConnection) playTurn(firstPlayer bool, squarePlayed uint32) bool {
-	if firstPlayer {
-		gc.board[squarePlayed] = 1
-	} else {
-		gc.board[squarePlayed] = 2
-	}
-	return gc.checkWin()
-}
-
-func (gc *GameConnection) checkWin() bool {
-	return gc.checkRows() || gc.checkColumns() || gc.checkCross()
-}
-
-func (gc *GameConnection) checkRows() bool {
-	if gc.board[0] != 0 && gc.board[0] == gc.board[1] && gc.board[0] == gc.board[2] {
-		return true
-	}
-	if gc.board[3] != 0 && gc.board[3] == gc.board[4] && gc.board[3] == gc.board[5] {
-		return true
-	}
-	if gc.board[6] != 0 && gc.board[6] == gc.board[7] && gc.board[6] == gc.board[8] {
-		return true
-	}
-	return false
-}
-
-func (gc *GameConnection) checkColumns() bool {
-	if gc.board[0] != 0 && gc.board[0] == gc.board[3] && gc.board[0] == gc.board[6] {
-		return true
-	}
-	if gc.board[1] != 0 && gc.board[1] == gc.board[4] && gc.board[1] == gc.board[7] {
-		return true
-	}
-	if gc.board[2] != 0 && gc.board[2] == gc.board[5] && gc.board[2] == gc.board[8] {
-		return true
-	}
-	return false
-}
-
-func (gc *GameConnection) checkCross() bool {
-	if gc.board[0] != 0 && gc.board[0] == gc.board[4] && gc.board[0] == gc.board[8] {
-		return true
-	}
-	if gc.board[2] != 0 && gc.board[2] == gc.board[4] && gc.board[2] == gc.board[6] {
-		return true
-	}
-	return false
 }
