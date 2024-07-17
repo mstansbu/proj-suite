@@ -1,0 +1,36 @@
+syntax="proto3";
+
+package message;
+
+option go_package = "github.com/mstansbu/tictactoe/proto";
+
+import "ttt.proto";
+
+message Message {
+    enum MessageType {
+        option allow_alias = true;
+        MT_UNDECLARED = 0;
+        MT_MESSAGEFAIL = 1;
+        MT_CLIENTJOINED = 2;
+        MT_PLAYERJOINED = 2;
+        MT_CLIENTLEFT = 3;
+        MT_PLAYERLEFT = 3;
+        MT_GAMESTART = 4;
+        MT_GAMEWIN = 5;
+        MT_PLAYTURN = 6;
+    }
+    bytes id = 1;
+    MessageType message_type = 2;
+    uint32 sender_id = 3;
+    uint64 server_id = 4;
+    Payload payload = 5;
+}
+
+message Payload {
+    oneof type {
+        ttt.PayloadPlayerJoin ttt_player_join_type = 1;
+        ttt.PayloadPlayTurn ttt_play_turn_type = 2;
+        ttt.PayloadGameWin ttt_game_win_type = 3;
+        ttt.PayloadGameStart ttt_game_start_type = 4;
+    }
+}

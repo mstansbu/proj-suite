@@ -2,10 +2,12 @@ package main
 
 import (
 	"log/slog"
+	"math/rand"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"github.com/mstansbu/tic-tac-toe/proto"
 	"github.com/mstansbu/tic-tac-toe/templates"
 )
 
@@ -64,14 +66,14 @@ func serveTicTacToe(c *gin.Context) {
 }
 
 func clientTIcTacToeConnect(c *gin.Context) {
-	var gameId uuid.UUID
+	var gameId uint64
 	gameIdString, ok := c.Params.Get("gameid")
 	if !ok {
 		slog.Error("Error getting game id param, param not found")
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	gameId, err := uuid.Parse(gameIdString)
+	gameId, err := strconv.ParseUint(gameIdString, 10, 64)
 	if err != nil {
 		slog.Error("Error parsing game id from url", "Error", err)
 		c.Status(http.StatusBadRequest)
@@ -90,7 +92,8 @@ func clientTIcTacToeConnect(c *gin.Context) {
 		return
 	}
 
-	player := &Client{Id: uuid.New(), conn: conn, game: game, send: make(chan *Message, 256)}
+	player := &Client{Id: rand.Uint32(), conn: conn, game: game, send: make(chan *proto.Message, 256)}
+
 	game.register <- player
 
 	go player.read()

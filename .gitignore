@@ -1,0 +1,5 @@
+#proto output dirs
+frontend/go/proto
+
+#air watch files
+frontend/go/tmp

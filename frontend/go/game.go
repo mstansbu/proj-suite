@@ -1,51 +1,29 @@
 package main
 
 import (
-	"fmt"
-	"log/slog"
-	"strconv"
+	"math/rand"
 
 	"github.com/google/uuid"
-	"github.com/valyala/fastjson"
+	pb "github.com/mstansbu/tic-tac-toe/proto"
 )
-
-type MessageType byte
-
-const (
-	MessageTurnPlayed MessageType = iota
-	MessageGameWin
-	MessageFail
-)
-
-type Message struct {
-	messageId   uuid.UUID
-	messageType MessageType
-	senderId    uuid.UUID
-	payload     []byte
-}
 
 type GameConnection struct {
 	gameServer *GameServer
-	Id         uuid.UUID
+	Id         uint64
 	board      [9]byte
-	players    map[uuid.UUID]*Client
-	broadcast  chan *Message
+	players    map[uint32]*Client
+	broadcast  chan *pb.Message
 	register   chan *Client
 	unregister chan *Client
-}
-
-type PlayMessage struct {
-	firstPlayer  bool  `json:"firstPlayer"`
-	squarePlayed uint8 `json:"squarePlayed"`
 }
 
 func NewGameConnection(gs *GameServer) *GameConnection {
 	return &GameConnection{
 		gameServer: gs,
-		Id:         uuid.New(),
+		Id:         rand.Uint64(), //TODO replace with pull/create from DB
 		board:      [9]byte{},
-		players:    make(map[uuid.UUID]*Client),
-		broadcast:  make(chan *Message, 256),
+		players:    make(map[uint32]*Client),
+		broadcast:  make(chan *pb.Message, 256),
 		register:   make(chan *Client, 256),
 		unregister: make(chan *Client, 256),
 	}
@@ -62,50 +40,42 @@ func (gc *GameConnection) run() {
 				close(player.send)
 			}
 		case message := <-gc.broadcast:
-			var parser fastjson.Parser
-			payload, err := parser.ParseBytes(message.payload)
-			if err != nil || !payload.Exists("firstPlayer") || !payload.Exists("squarePlayed") {
-				gc.players[message.senderId].send <- &Message{messageId: message.messageId, senderId: gc.Id, messageType: MessageFail}
-				continue
-			}
-			firstPlayerString := payload.Get("firstPlayer").String()
-			firstPlayer := true
-			if firstPlayerString == "false" {
-				firstPlayer = false
-			}
-			//Fix jSON
-			spString := string(payload.Get("squarePlayed").GetStringBytes())
-			fmt.Println(spString)
-			squarePlayed, err := strconv.Atoi(spString)
-			if err != nil {
-				slog.Error("Failed to parse squareplayed", "Error", err)
-				gc.players[message.senderId].send <- &Message{messageId: message.messageId, senderId: gc.Id, messageType: MessageFail}
-				continue
-			}
-			if squarePlayed > 8 {
-				gc.players[message.senderId].send <- &Message{messageId: message.messageId, senderId: gc.Id, messageType: MessageFail}
-				continue
-			}
-			//clientIdByteArray := [16]byte(clientId)
-			var firstPlayerByte byte
-			if firstPlayer {
-				firstPlayerByte = 1
-			}
-			win := gc.playTurn(firstPlayer, byte(squarePlayed))
-			for _, player := range gc.players {
-				if message.senderId != player.Id {
-					player.send <- &Message{messageId: message.messageId, senderId: message.senderId, messageType: MessageTurnPlayed, payload: []byte{byte(squarePlayed), firstPlayerByte}}
-				}
-				if win {
-					//payload := append([]byte{MessageGameWin}, clientIdByteArray[:]...)
-					player.send <- &Message{messageId: message.messageId, senderId: gc.Id, messageType: MessageGameWin, payload: []byte{firstPlayerByte}}
+			switch message.MessageType {
+			case pb.Message_MT_PLAYTURN:
+				switch message.Payload.Type.(type) {
+				case *pb.Payload_TttPlayTurnType:
+					ptPayload := message.Payload.GetTttPlayTurnType()
+					if ptPayload.SquarePlayed > 8 {
+						//todo send fail message
+					}
+					win := gc.playTurn(message.Payload.GetTttPlayTurnType().FirstPlayer, message.Payload.GetTttPlayTurnType().GetSquarePlayed())
+					var winMessage pb.Message
+					for _, player := range gc.players {
+						if message.SenderId != player.Id {
+							player.send <- message
+						}
+						if win {
+							id := uuid.New() //TODO Figure out message ids and whether they should be one per event or message sent
+							winMessage = pb.Message{
+								MessageType: pb.Message_MT_GAMEWIN,
+								Id:          id[:],
+								SenderId:    message.SenderId,
+								ServerId:    message.ServerId,
+								Payload:     &pb.Payload{Type: &pb.Payload_TttGameWinType{TttGameWinType: &pb.PayloadGameWin{FirstPlayer: ptPayload.FirstPlayer}}},
+							}
+							player.send <- &winMessage
+						}
+					}
+				case nil:
+				default:
 				}
 			}
+
 		}
 	}
 }
 
-func (gc *GameConnection) playTurn(firstPlayer bool, squarePlayed byte) bool {
+func (gc *GameConnection) playTurn(firstPlayer bool, squarePlayed uint32) bool {
 	if firstPlayer {
 		gc.board[squarePlayed] = 1
 	} else {

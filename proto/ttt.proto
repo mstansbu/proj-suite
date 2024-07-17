@@ -1,0 +1,22 @@
+syntax="proto3";
+
+package ttt;
+
+option go_package = "github.com/mstansbu/tictactoe/proto";
+
+message PayloadPlayerJoin {
+
+}
+
+message PayloadGameStart {
+
+}
+
+message PayloadPlayTurn {
+    bool first_player = 1;
+    uint32 square_played = 2;
+}
+
+message PayloadGameWin {
+    bool first_player = 1;
+}
