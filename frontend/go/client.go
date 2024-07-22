@@ -2,12 +2,13 @@ package main
 
 import (
 	"log/slog"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	pb "github.com/mstansbu/tic-tac-toe/proto"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -24,10 +25,10 @@ const (
 )
 
 type Client struct {
-	Id   uuid.UUID
+	Id   uint32
 	game *GameConnection
 	conn *websocket.Conn
-	send chan *Message
+	send chan *pb.Message
 }
 
 func (c *Client) read() {
@@ -41,14 +42,36 @@ func (c *Client) read() {
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
 	for {
-		_, message, err := c.conn.ReadMessage()
+		_, byteMessage, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				slog.Error("Connection from client closed unexpectedly", "Error", err)
 			}
 			break
 		}
-		c.game.broadcast <- &Message{messageId: uuid.New(), senderId: c.Id, messageType: MessageTurnPlayed, payload: message}
+		if len(byteMessage) != 0 {
+			jsonMessage, err := ClientParser.ParseBytes(byteMessage)
+			if err != nil {
+				//TODO
+				slog.Error("Parser Error", "Error", err, "byteMessage", byteMessage)
+				panic("yurp")
+			}
+			messageId := uuid.New()
+			message := &pb.Message{Id: messageId[:], SenderId: c.Id, ServerId: c.game.Id}
+			messageType := jsonMessage.GetStringBytes("messageType")
+			payload := jsonMessage.Get("payload")
+			switch string(messageType) {
+			case "MT_PLAYTURN":
+				message.MessageType = pb.Message_MT_PLAYTURN
+				message.Payload = &pb.Payload{
+					Type: &pb.Payload_TttPlayTurnType{
+						TttPlayTurnType: &pb.PayloadPlayTurn{
+							FirstPlayer:  payload.GetBool("firstPlayer"),
+							SquarePlayed: uint32(payload.GetUint("squarePlayed")),
+						}}}
+			}
+			c.game.broadcast <- message
+		}
 	}
 }
 
@@ -69,31 +92,48 @@ func (c *Client) write() {
 				return
 			}
 			var builder strings.Builder
-			switch message.messageType {
-			case MessageFail:
+			var toClient []byte
+			switch message.MessageType {
+			case pb.Message_MT_MESSAGEFAIL:
+				//TODO handle message type FAIL
 				builder.WriteString(`{"error":"Message Failed To Send"}`)
-			case MessageTurnPlayed:
-				builder.WriteString(`{"square":` + strconv.Itoa(int(message.payload[0])) + `,"firstPlayer":`)
-				if message.payload[1] == 1 {
-					builder.WriteString("true")
-				} else {
-					builder.WriteString("false")
+				toClient = []byte(builder.String())
+			case pb.Message_MT_PLAYTURN:
+				switch message.Payload.Type.(type) {
+				case *pb.Payload_TttPlayTurnType:
+					out, err := protojson.Marshal(message)
+					if err != nil {
+						//TODO handle marshall error
+						panic("yurp")
+					}
+					toClient = out
+				case nil:
+					//TODO deal with message but no payload
+				default:
+					//TODO deal with unrecognized payload type
 				}
-				builder.WriteString(`}`)
-			case MessageGameWin:
-				builder.WriteString(`{"won":true,"firstPlayer":`)
-				if message.payload[0] == 1 {
-					builder.WriteString("true")
-				} else {
-					builder.WriteString("false")
+			case pb.Message_MT_GAMEWIN:
+				switch message.Payload.Type.(type) {
+				case *pb.Payload_TttGameWinType:
+					out, err := protojson.Marshal(message)
+					if err != nil {
+						//TODO handle marshall error
+						panic("yurp")
+					}
+					toClient = out
+				case nil:
+					//TODO deal with message but no payload
+				default:
+					//TODO deal with unrecognized payload type
 				}
-				builder.WriteString(`}`)
+			default:
+				//TODO with unrecognize message type
 			}
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return
 			}
-			w.Write([]byte(builder.String()))
+			w.Write(toClient)
 			if err := w.Close(); err != nil {
 				return
 			}

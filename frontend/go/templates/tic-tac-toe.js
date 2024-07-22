@@ -19,21 +19,21 @@ document.body.addEventListener('ttt-start', (event) => {
 
     socket.onmessage = (event) => {
         console.log(`Message from server: ${event.data}`);
-        const payload = JSON.parse(event.data);
-        if (payload.hasOwnProperty("error")) {
+        const message = JSON.parse(event.data);
+        if (message.messageType == "MT_MESSAGEFAIL") {
             console.error("Woop an error from a message");
             //Handle Error
-        } else if (payload.hasOwnProperty("won")) {
+        } else if (message.messageType == "MT_GAMEWIN") {
             console.log("Someone won the game, was it you?");
             myTurn = false;
             //Handle Win
-        } else if (payload.hasOwnProperty("square")) {
+        } else if (message.messageType == "MT_PLAYTURN") {
+            const payload = message.payload.tttPlayTurnType
+            const id = payload.hasOwnProperty("squarePlayed") ? "ttt-" + payload.squarePlayed : "ttt-0";
+            const div = document.getElementById(id);
             if (payload.firstPlayer != xplayer && div.classList.contains('unplayed')) {
-                const id = "ttt-" + payload.square;
-                const div = document.getElementById(id);
                 div.classList.remove('unplayed');
                 xplayer ? div.classList.add('played-o') : div.classList.add('played-x');
-                console.log(div.classList)
                 myTurn = !myTurn;
             }
         }
@@ -48,9 +48,9 @@ document.body.addEventListener('ttt-start', (event) => {
             div.classList.remove('unplayed');
             xplayer ? div.classList.add('played-x') : div.classList.add('played-o');
             myTurn = !myTurn;
-            const payload = { "squarePlayed": $('li').index(div), "firstPlayer": xplayer };
+            const payload = { "messageType": "MT_PLAYTURN", "payload": { "squarePlayed": $(`#${div.id}`).index(), "firstPlayer": xplayer, }, };
             console.log(payload)
-            socket.send(payload);
+            socket.send(JSON.stringify(payload));
         }
     };
 });

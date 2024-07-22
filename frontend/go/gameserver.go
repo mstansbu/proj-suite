@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -17,16 +16,16 @@ var upgrader = websocket.Upgrader{
 }
 
 type GameServer struct {
-	gamesInProgress map[uuid.UUID]*GameConnection
-	gamesWaiting    map[uuid.UUID]*GameConnection
+	gamesInProgress map[uint64]*GameConnection
+	gamesWaiting    map[uint64]*GameConnection
 	register        chan *GameConnection
 	unregister      chan *GameConnection
 }
 
 func NewGameServer() *GameServer {
 	return &GameServer{
-		gamesInProgress: make(map[uuid.UUID]*GameConnection),
-		gamesWaiting:    make(map[uuid.UUID]*GameConnection),
+		gamesInProgress: make(map[uint64]*GameConnection),
+		gamesWaiting:    make(map[uint64]*GameConnection),
 		register:        make(chan *GameConnection, 256),
 		unregister:      make(chan *GameConnection, 256),
 	}
@@ -76,7 +75,7 @@ func (gs *GameServer) findGame() (*GameConnection, error) {
 	return nil, ErrNoGamesWaiting
 }
 
-func (gs *GameServer) lookUpGame(gameId uuid.UUID) (*GameConnection, error) {
+func (gs *GameServer) lookUpGame(gameId uint64) (*GameConnection, error) {
 	if game, ok := gs.gamesInProgress[gameId]; ok {
 		return game, nil
 	} else if game, ok := gs.gamesWaiting[gameId]; ok {

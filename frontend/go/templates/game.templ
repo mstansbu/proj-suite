@@ -1,13 +1,12 @@
 package templates
 
-import "github.com/google/uuid"
 import "strconv"
 
-templ TicTacToe(gameid uuid.UUID, firstPlayer bool) {
+templ TicTacToe(gameid uint64, firstPlayer bool) {
 	<div
 		id="ttt-wrapper"
 		class="wrapper"
-		data-gameid={gameid.String()}
+		data-gameid={strconv.FormatUint(gameid, 10)}
 		data-xplayer={strconv.FormatBool(firstPlayer)}
 		hx-on:htmx:load="htmx.trigger('#ttt-wrapper','ttt-start')"
 	>
