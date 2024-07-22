@@ -10,7 +10,10 @@ import (
 	pb "github.com/mstansbu/tic-tac-toe/proto"
 	"github.com/mstansbu/tic-tac-toe/templates"
 	"github.com/mstansbu/tic-tac-toe/tictactoe"
+	"github.com/valyala/fastjson"
 )
+
+var ClientParser fastjson.Parser
 
 func NewRouter() *gin.Engine {
 	router := gin.Default()

@@ -5,9 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	pb "github.com/mstansbu/tic-tac-toe/proto"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -41,20 +42,36 @@ func (c *Client) read() {
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
 	for {
-		_, enMessage, err := c.conn.ReadMessage()
+		_, byteMessage, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				slog.Error("Connection from client closed unexpectedly", "Error", err)
 			}
 			break
 		}
-		message := &pb.Message{}
-		if err := proto.Unmarshal(enMessage, message); err != nil {
-			//TODO handle errs or unknown message types
-			slog.Error("oops", "err", err)
+		if len(byteMessage) != 0 {
+			jsonMessage, err := ClientParser.ParseBytes(byteMessage)
+			if err != nil {
+				//TODO
+				slog.Error("Parser Error", "Error", err, "byteMessage", byteMessage)
+				panic("yurp")
+			}
+			messageId := uuid.New()
+			message := &pb.Message{Id: messageId[:], SenderId: c.Id, ServerId: c.game.Id}
+			messageType := jsonMessage.GetStringBytes("messageType")
+			payload := jsonMessage.Get("payload")
+			switch string(messageType) {
+			case "MT_PLAYTURN":
+				message.MessageType = pb.Message_MT_PLAYTURN
+				message.Payload = &pb.Payload{
+					Type: &pb.Payload_TttPlayTurnType{
+						TttPlayTurnType: &pb.PayloadPlayTurn{
+							FirstPlayer:  payload.GetBool("firstPlayer"),
+							SquarePlayed: uint32(payload.GetUint("squarePlayed")),
+						}}}
+			}
+			c.game.broadcast <- message
 		}
-		c.game.broadcast <- message
-
 	}
 }
 
@@ -84,9 +101,10 @@ func (c *Client) write() {
 			case pb.Message_MT_PLAYTURN:
 				switch message.Payload.Type.(type) {
 				case *pb.Payload_TttPlayTurnType:
-					out, err := proto.Marshal(message)
+					out, err := protojson.Marshal(message)
 					if err != nil {
 						//TODO handle marshall error
+						panic("yurp")
 					}
 					toClient = out
 				case nil:
@@ -97,9 +115,10 @@ func (c *Client) write() {
 			case pb.Message_MT_GAMEWIN:
 				switch message.Payload.Type.(type) {
 				case *pb.Payload_TttGameWinType:
-					out, err := proto.Marshal(message)
+					out, err := protojson.Marshal(message)
 					if err != nil {
 						//TODO handle marshall error
+						panic("yurp")
 					}
 					toClient = out
 				case nil:

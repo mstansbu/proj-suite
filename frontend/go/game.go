@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/google/uuid"
@@ -50,6 +51,7 @@ func (gc *GameConnection) run() {
 				switch message.Payload.Type.(type) {
 				case *pb.Payload_TttPlayTurnType:
 					ptPayload := message.Payload.GetTttPlayTurnType()
+					fmt.Printf("SquarePlayed: %v\n", ptPayload.SquarePlayed)
 					if ptPayload.SquarePlayed > 8 {
 						//todo send fail message
 					}
